@@ -5,5 +5,3 @@ snr = 15; % signal to noise ratio
 num_tests = 1; % number of iterations
 
 simulate_ber(K, n, L, snr, num_tests);
-
-%% gay porn
