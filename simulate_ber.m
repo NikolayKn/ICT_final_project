@@ -1,17 +1,17 @@
-function [ber,PMR] = simulate_ber(K, n, L, snr, num_tests)
-    ber = zeros(1, K*n);
+function ber = simulate_ber(K, n, L, snr, num_tests)
+    ber = zeros(1, n);
     N0 = (10^(-snr/10));
     sigma = sqrt(N0/2);
     
     
-    for bit = 1:K*n
+    for bit = 1:n
         wrong_dec = 0;
         for tests = 1:num_tests
-
-            % generate inf. w   ord
+            
+            rng(round(tests*10));
+            
+                        % generate inf. word
             iwd = randi([0 1], K, n);
-            %предположим, заморозим первые 10 битов
-            iwd(1:10) = 0;
 
             % encode
             cwd = polar_transform(iwd);
@@ -28,31 +28,29 @@ function [ber,PMR] = simulate_ber(K, n, L, snr, num_tests)
             temp_sums = repmat(temp_sums, 1, n);
             in_logProbs = -abs(repmat(rx, 2^K, 1) - temp_sums).^2/2/sigma^2;                        
 
-            frozen_matrix = 2*ones(K, n);
+            f_matrix = 2*ones(K, n);
             %скажем, что мы знаем, что первые 10 битов точно равны 0
-            frozen_matrix(1:10) = 0;
+%             frozen_matrix(1:10) = 0;
             % здесь если элемент матрицы равен 0, то мы точно знаем что там
             % 0, если 1, то мы точно знаем что там 1, если 2, то мы не
             % знаем что там и эт надо декодить. ѕо сути так в декодер
-            % передаЄтс€ информаци€ о расстановке замороденых битов
-%              frozen_matrix(1:bit-1) = iwd(1:bit-1);
+            % передаЄтс€ информаци€ о расстановке
+            f_matrix(1:bit-1) = iwd(1:bit-1);
             
             % decode
-            [est_iwd, prob] = pcscl_jsc(K, log2(n), L, frozen_matrix, in_logProbs);
-            
-            
+            [est_iwd, ~] = pcscl_jsc(K, log2(n), L, f_matrix, in_logProbs);
             
             est_iwd = transpose(de2bi(est_iwd, K));
-            PMR = max(abs(prob))-min(abs(prob));
-%             plot(PMR);
-
-            est_iwddd = reshape(est_iwd,[],n);
-            imshow([est_iwddd;iwd*2],[0 2])
-
-
             if (est_iwd(bit) ~= iwd(bit))
                 wrong_dec = wrong_dec + 1;
             end
+            
+%             est_iwd = transpose(de2bi(est_iwd, K));
+%             PMR = max(abs(prob))-min(abs(prob));
+%             plot(PMR);
+
+%             est_iwddd = reshape(est_iwd,[],n);
+%             imshow(2-[est_iwddd;iwd*2],[0 2])
         end
         ber(bit) = wrong_dec/tests;
         fprintf('\tber (%d) = %f\n', bit, ber(bit));
